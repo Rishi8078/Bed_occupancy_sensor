@@ -301,6 +301,10 @@ fallback_password: "YourFallbackPassword"
 
 If you have the ESPHome integration set up in Home Assistant, the device will be **auto-discovered** as soon as it connects to your network.
 
+<p align="center">
+  <img src="time.png" alt="Time in bed" width="300">
+</p>
+
 ### Entities
 
 The following entities will be created, allowing for full control and monitoring:
@@ -314,6 +318,10 @@ The following entities will be created, allowing for full control and monitoring
   * `number.bed_occupancy_sensor_trigger_pressure`: The pressure percentage required to trigger the `occupied` state. This is automatically calculated but can be manually set.
 
 ### Usage and Calibration Guide
+
+<p align="center">
+ <img src="controls.png" alt="Time in bed" width="300">
+</p>
 
 1.  **Placement:** Place the FSR sensor under your mattress, ideally in a location that experiences consistent pressure, like under your hip or shoulder area. Using a small, flat piece of plastic on top of the FSR can help distribute the weight.
 2.  **Calibrate Unoccupied:** With no one in bed, navigate to the device in Home Assistant and press the **Calibrate Unoccupied** button. This sets the baseline pressure.
