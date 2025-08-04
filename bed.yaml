@@ -1,0 +1,200 @@
+substitutions:
+  name: bed-occupancy-sensor
+  friendly_name: Bed Occupancy Sensor
+  update_interval: "0.1s"  # Increased sampling rate
+  averaging_window_samples: "3"  # Reduced averaging
+  trigger_percentile: "0.75"
+  fast_delayed_on: "0ms"
+  fast_delayed_off: "200ms"  # Reduced delay
+  standard_delayed_on: "500ms"  # Reduced delay
+  standard_delayed_off: "2s"    # Reduced delay
+  reporting_delta: "0.5"    # More sensitive reporting
+  reporting_interval_max: "60s"  # More frequent updates
+  calibrate_100: "3.3"  # Maximum voltage
+  calibrate_0: "0.5"    # Minimum voltage for detection
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  min_version: 2024.6.0
+  name_add_mac_suffix: false
+
+esp8266:
+  board: nodemcuv2
+  restore_from_flash: true
+  early_pin_init: true
+
+logger:
+  level: INFO
+  baud_rate: 0
+
+api:
+ota:
+  platform: esphome
+
+web_server:
+  port: 80
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  manual_ip:
+    static_ip: 192.168.0.200
+    gateway: 192.168.0.1
+    subnet: 255.255.255.0
+  fast_connect: true
+  power_save_mode: NONE
+  output_power: 20dB
+  ap:
+    ssid: "${friendly_name}"
+    password: !secret fallback_password
+
+# Global switch for full range mode
+switch:
+  - platform: template
+    name: "${friendly_name} Full Range Mode"
+    id: full_range
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+
+sensor:
+  - platform: adc
+    pin: A0
+    name: "${friendly_name} Pressure"
+    id: bed_sensor
+    update_interval: ${update_interval}
+    unit_of_measurement: '%'
+    icon: mdi:gauge
+    filters:
+      - multiply: 3.3  # Convert to voltage (0-3.3V)
+      - lambda: |-     # Scale voltage to percentage
+          float cal_0 = id(full_range).state ? 0 : ${calibrate_0};
+          float val = (x - cal_0) * 100;
+          float range = ${calibrate_100} - cal_0;
+          return val/range;
+      - clamp:
+          min_value: 0
+      - sliding_window_moving_average:
+          window_size: ${averaging_window_samples}
+          send_every: 1
+      - or:
+          - delta: ${reporting_delta}
+          - throttle: ${reporting_interval_max}
+
+  - platform: copy
+    source_id: bed_sensor
+    name: "Calibrated ${friendly_name} Pressure"
+    id: bed_sensor_calibrated
+    icon: mdi:scale-balance
+    filters:
+      - lambda: |-
+          float cal_0 = id(val_unoccupied).state;
+          float cal_100 = id(val_occupied).state;
+          float val = (x - cal_0) * 100;
+          float range = cal_100 - cal_0;
+          return val/range;
+      - clamp:
+          max_value: 100
+          min_value: 0
+
+binary_sensor:
+  - platform: template
+    name: "${friendly_name} (Fast)"
+    id: bed_occupied_fast
+    device_class: occupancy
+    icon: mdi:bed
+    filters:
+      - delayed_on: ${fast_delayed_on}
+      - delayed_off: ${fast_delayed_off}
+    lambda: return id(bed_sensor).state > id(val_trigger).state;
+
+  - platform: template
+    name: "${friendly_name}"
+    id: bed_occupied
+    device_class: occupancy
+    icon: mdi:bed
+    filters:
+      - delayed_on: ${standard_delayed_on}
+      - delayed_off: ${standard_delayed_off}
+    lambda: return id(bed_sensor).state > id(val_trigger).state;
+
+number:
+  - platform: template
+    name: "${friendly_name} Unoccupied Pressure"
+    id: val_unoccupied
+    icon: mdi:gauge-empty
+    unit_of_measurement: '%'
+    optimistic: true
+    restore_value: true
+    initial_value: 0
+    min_value: 0
+    max_value: 120
+    step: 1.0
+    mode: box
+    on_value:
+      then:
+        - script.execute: update_trigger
+
+  - platform: template
+    name: "${friendly_name} Occupied Pressure"
+    id: val_occupied
+    icon: mdi:gauge-full
+    unit_of_measurement: '%'
+    optimistic: true
+    restore_value: true
+    initial_value: 100
+    min_value: 0
+    max_value: 120
+    step: 1.0
+    mode: box
+    on_value:
+      then:
+        - script.execute: update_trigger
+
+  - platform: template
+    name: "${friendly_name} Trigger Pressure"
+    id: val_trigger
+    icon: mdi:gauge
+    unit_of_measurement: '%'
+    optimistic: true
+    restore_value: true
+    initial_value: 50
+    min_value: 0
+    max_value: 120
+    step: 1.0
+    mode: box
+
+button:
+  - platform: template
+    name: "Calibrate ${friendly_name} Unoccupied"
+    id: calibration_set_unoccupied
+    icon: mdi:bed-empty
+    on_press:
+      then:
+        - number.set:
+            id: val_unoccupied
+            value: !lambda return round(id(bed_sensor).state * 100)/100.0;
+
+  - platform: template
+    name: "Calibrate ${friendly_name} Occupied"
+    id: calibration_set_occupied
+    icon: mdi:bed
+    on_press:
+      then:
+        - number.set:
+            id: val_occupied
+            value: !lambda return round(id(bed_sensor).state * 100)/100.0;
+
+script:
+  - id: update_trigger
+    mode: queued
+    then:
+      - lambda: |-
+          float unoccupied_pressure = id(val_unoccupied).state;
+          float occupied_pressure = id(val_occupied).state;
+          float trigger_pressure = unoccupied_pressure + 
+            ((occupied_pressure - unoccupied_pressure) * float(${trigger_percentile}));
+          trigger_pressure = round(trigger_pressure * 100)/100.0;
+          auto call = id(val_trigger).make_call();
+          call.set_value(trigger_pressure);
+          call.perform();
