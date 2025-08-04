@@ -1,4 +1,4 @@
-# 🛏 Bed Occupancy Sensor with ESP8266 + FSR + ESPHome
+# Bed Occupancy Sensor with ESP8266 + FSR + ESPHome
 
 A low-cost, highly-responsive, and WiFi-enabled bed occupancy sensor using a Force-Sensitive Resistor (FSR) and a NodeMCU ESP8266. It integrates seamlessly with Home Assistant via ESPHome, making it perfect for triggering automations like turning off lights, adjusting thermostats, or managing sleep tracking routines.
 
