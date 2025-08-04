@@ -330,26 +330,6 @@ The following entities will be created, allowing for full control and monitoring
 
 -----
 
-## 📊 Future Improvements
-
-  * **Multiple FSRs:** Use multiple sensors averaged together for more reliable detection across the entire bed.
-  * **Deep Sleep:** Implement deep sleep mode to save power, waking the ESP8266 periodically to check the sensor status.
-  * **Sleep Tracking:** Log the duration of occupancy to a helper in Home Assistant to track sleep time automatically.
-
------
-
-## 📁 Repository Structure
-
-```
-bed-occupancy-sensor/
-├── bed.yaml               # The main ESPHome configuration file
-├── secrets.yaml           # Your Wi-Fi and API credentials (keep this private!)
-├── images/                # Optional: Photos of your setup
-└── README.md              # This file
-```
-
------
-
 ## ✅ License
 
 This project is licensed under the **MIT License**. See the `LICENSE` file for details. Feel free to use, modify, and distribute it for personal and commercial use.
