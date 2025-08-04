@@ -4,6 +4,10 @@ A low-cost, highly-responsive, and WiFi-enabled bed occupancy sensor using a For
 
 This project features dynamic calibration directly from the Home Assistant dashboard, allowing you to fine-tune sensor sensitivity without ever touching the code again.
 
+<p align="center">
+  <img src="trial.gif" alt="demo" width="300">
+</p>
+
 -----
 
 ## ✨ Features
